@@ -31,7 +31,7 @@ Though not required, it's recommended that flannel uses the Kubernetes API as it
 
 Flannel can be added to any existing Kubernetes cluster though it's simplest to add `flannel` before any pods using the pod network have been started.
 
-For Kubernetes v1.6+
+For Kubernetes v1.7+
 `kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml`
 
 See [Kubernetes](Documentation/kubernetes.md) for more details.
@@ -65,7 +65,7 @@ See [CONTRIBUTING][contributing] for details on submitting patches and the contr
 
 See [reporting bugs][reporting] for details about reporting any issues.
 
-## License
+## Licensing
 
 Flannel is under the Apache 2.0 license. See the [LICENSE][license] file for details.
 

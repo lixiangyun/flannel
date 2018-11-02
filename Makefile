@@ -1,4 +1,4 @@
-.PHONY: test e2e-test cover gofmt gofmt-fix license-check clean tar.gz docker-push release docker-push-all flannel-git
+.PHONY: test e2e-test cover gofmt gofmt-fix header-check clean tar.gz docker-push release docker-push-all flannel-git
 
 # Registry used for publishing images
 REGISTRY?=quay.io/coreos/flannel
@@ -14,7 +14,7 @@ else
 endif
 
 # Go version to use for builds
-GO_VERSION=1.8.3
+GO_VERSION=1.10.3
 
 # K8s version used for Makefile helpers
 K8S_VERSION=v1.6.6
@@ -22,7 +22,7 @@ K8S_VERSION=v1.6.6
 GOARM=7
 
 # These variables can be overridden by setting an environment variable.
-TEST_PACKAGES?=pkg/ip subnet subnet/etcdv2 network backend/hostgw
+TEST_PACKAGES?=pkg/ip subnet subnet/etcdv2 network backend
 TEST_PACKAGES_EXPANDED=$(TEST_PACKAGES:%=github.com/coreos/flannel/%)
 PACKAGES?=$(TEST_PACKAGES) network
 PACKAGES_EXPANDED=$(PACKAGES:%=github.com/coreos/flannel/%)
@@ -36,6 +36,10 @@ clean:
 
 dist/flanneld: $(shell find . -type f  -name '*.go')
 	go build -o dist/flanneld \
+	  -ldflags '-s -w -X github.com/coreos/flannel/version.Version=$(TAG) -extldflags "-static"'
+
+dist/flanneld.exe: $(shell find . -type f  -name '*.go')
+	GOOS=windows go build -o dist/flanneld.exe \
 	  -ldflags '-s -w -X github.com/coreos/flannel/version.Version=$(TAG) -extldflags "-static"'
 
 # This will build flannel natively using golang image
@@ -63,9 +67,11 @@ ifeq ($(ARCH),amd64)
 endif
 
 ### TESTING
-test: license-check gofmt
+test: header-check gofmt
 	# Run the unit tests
-	docker run --cap-add=NET_ADMIN --rm -v $(shell pwd):/go/src/github.com/coreos/flannel golang:1.8.3 go test -v -cover $(TEST_PACKAGES_EXPANDED)
+	# NET_ADMIN capacity is required to do some network operation
+	# SYS_ADMIN capacity is required to create network namespace
+	docker run --cap-add=NET_ADMIN --cap-add=SYS_ADMIN --rm -v $(shell pwd):/go/src/github.com/coreos/flannel golang:1.8.3 go test -v -cover $(TEST_PACKAGES_EXPANDED)
 
 	# Test the docker-opts script
 	cd dist; ./mk-docker-opts_tests.sh
@@ -83,8 +89,8 @@ cover:
 	go test -coverprofile cover.out $(PACKAGES_EXPANDED)
 	go tool cover -html=cover.out
 
-license-check:
-	./license-check.sh
+header-check:
+	./header-check.sh
 
 # Throw an error if gofmt finds problems.
 # "read" will return a failure return code if there is no output. This is inverted wth the "!"
@@ -134,6 +140,9 @@ tar.gz:
 	ARCH=amd64 make dist/flanneld-amd64
 	tar --transform='flags=r;s|-amd64||' -zcvf dist/flannel-$(TAG)-linux-amd64.tar.gz -C dist flanneld-amd64 mk-docker-opts.sh ../README.md
 	tar -tvf dist/flannel-$(TAG)-linux-amd64.tar.gz
+	ARCH=amd64 make dist/flanneld.exe
+	tar --transform='flags=r;s|-amd64||' -zcvf dist/flannel-$(TAG)-windows-amd64.tar.gz -C dist flanneld.exe mk-docker-opts.sh ../README.md
+	tar -tvf dist/flannel-$(TAG)-windows-amd64.tar.gz
 	ARCH=ppc64le make dist/flanneld-ppc64le
 	tar --transform='flags=r;s|-ppc64le||' -zcvf dist/flannel-$(TAG)-linux-ppc64le.tar.gz -C dist flanneld-ppc64le mk-docker-opts.sh ../README.md
 	tar -tvf dist/flannel-$(TAG)-linux-ppc64le.tar.gz

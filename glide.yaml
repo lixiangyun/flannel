@@ -16,7 +16,8 @@ import:
   - pkg/transport
 - package: github.com/coreos/go-iptables
   subpackages:
-  - iptables
+    - iptables
+  version: ~0.4.0
 - package: github.com/coreos/go-systemd
   subpackages:
   - activation
@@ -59,3 +60,6 @@ import:
   - pkg/watch
 - package: github.com/joho/godotenv
   version: v1.1
+- package: github.com/bronze1man/goStrongswanVici
+  version: 4d72634a2f113aa48347dbc7dcb14adb806b6534
+

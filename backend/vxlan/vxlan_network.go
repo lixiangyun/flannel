@@ -33,10 +33,13 @@ import (
 
 type network struct {
 	backend.SimpleNetwork
-	extIface  *backend.ExternalInterface
 	dev       *vxlanDevice
 	subnetMgr subnet.Manager
 }
+
+const (
+	encapOverhead = 50
+)
 
 func newNetwork(subnetMgr subnet.Manager, extIface *backend.ExternalInterface, dev *vxlanDevice, _ ip.IP4Net, lease *subnet.Lease) (*network, error) {
 	nw := &network{
@@ -77,7 +80,7 @@ func (nw *network) Run(ctx context.Context) {
 }
 
 func (nw *network) MTU() int {
-	return nw.dev.MTU()
+	return nw.ExtIface.Iface.MTU - encapOverhead
 }
 
 type vxlanLeaseAttrs struct {
@@ -115,14 +118,10 @@ func (nw *network) handleSubnetEvents(batch []subnet.Event) {
 		}
 		var directRoutingOK = false
 		if nw.dev.directRouting {
-			routes, err := netlink.RouteGet(attrs.PublicIP.ToIP())
-			if err != nil {
-				log.Errorf("Couldn't lookup route to %v: %v", attrs.PublicIP, err)
-				continue
-			}
-			if len(routes) == 1 && routes[0].Gw == nil {
-				// There is only a single route and there's no gateway (i.e. it's directly connected)
-				directRoutingOK = true
+			if dr, err := ip.DirectRouting(attrs.PublicIP.ToIP()); err != nil {
+				log.Error(err)
+			} else {
+				directRoutingOK = dr
 			}
 		}
 

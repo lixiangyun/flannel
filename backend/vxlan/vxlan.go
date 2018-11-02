@@ -43,7 +43,7 @@ package vxlan
 // How it works:
 // Create the vxlan device but don't register for any L2MISS or L3MISS messages
 // Then, as each remote host is discovered (either on startup or when they are added), do the following
-// 1) create routing table entry for the remote subnet. It goes via the vxlan device but also specifies a next hop (of the remote flannel host).
+// 1) Create routing table entry for the remote subnet. It goes via the vxlan device but also specifies a next hop (of the remote flannel host).
 // 2) Create a static ARP entry for the remote flannel host IP address (and the VTEP MAC)
 // 3) Create an FDB entry with the VTEP MAC and the public IP of the remote flannel daemon.
 //
@@ -55,9 +55,9 @@ package vxlan
 import (
 	"encoding/json"
 	"fmt"
-	"net"
-
 	log "github.com/golang/glog"
+	"net"
+	"sync"
 
 	"golang.org/x/net/context"
 
@@ -101,7 +101,7 @@ func newSubnetAttrs(publicIP net.IP, mac net.HardwareAddr) (*subnet.LeaseAttrs, 
 	}, nil
 }
 
-func (be *VXLANBackend) RegisterNetwork(ctx context.Context, config *subnet.Config) (backend.Network, error) {
+func (be *VXLANBackend) RegisterNetwork(ctx context.Context, wg sync.WaitGroup, config *subnet.Config) (backend.Network, error) {
 	// Parse our configuration
 	cfg := struct {
 		VNI           int

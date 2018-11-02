@@ -43,16 +43,34 @@ type IPTablesRule struct {
 func MasqRules(ipn ip.IP4Net, lease *subnet.Lease) []IPTablesRule {
 	n := ipn.String()
 	sn := lease.Subnet.String()
+	supports_random_fully := false
+	ipt, err := iptables.New()
+	if err == nil {
+		supports_random_fully = ipt.HasRandomFully()
+	}
 
-	return []IPTablesRule{
-		// This rule makes sure we don't NAT traffic within overlay network (e.g. coming out of docker0)
-		{"nat", "POSTROUTING", []string{"-s", n, "-d", n, "-j", "RETURN"}},
-		// NAT if it's not multicast traffic
-		{"nat", "POSTROUTING", []string{"-s", n, "!", "-d", "224.0.0.0/4", "-j", "MASQUERADE"}},
-		// Prevent performing Masquerade on external traffic which arrives from a Node that owns the container/pod IP address
-		{"nat", "POSTROUTING", []string{"!", "-s", n, "-d", sn, "-j", "RETURN"}},
-		// Masquerade anything headed towards flannel from the host
-		{"nat", "POSTROUTING", []string{"!", "-s", n, "-d", n, "-j", "MASQUERADE"}},
+	if supports_random_fully {
+		return []IPTablesRule{
+			// This rule makes sure we don't NAT traffic within overlay network (e.g. coming out of docker0)
+			{"nat", "POSTROUTING", []string{"-s", n, "-d", n, "-j", "RETURN"}},
+			// NAT if it's not multicast traffic
+			{"nat", "POSTROUTING", []string{"-s", n, "!", "-d", "224.0.0.0/4", "-j", "MASQUERADE", "--random-fully"}},
+			// Prevent performing Masquerade on external traffic which arrives from a Node that owns the container/pod IP address
+			{"nat", "POSTROUTING", []string{"!", "-s", n, "-d", sn, "-j", "RETURN"}},
+			// Masquerade anything headed towards flannel from the host
+			{"nat", "POSTROUTING", []string{"!", "-s", n, "-d", n, "-j", "MASQUERADE", "--random-fully"}},
+		}
+	} else {
+		return []IPTablesRule{
+			// This rule makes sure we don't NAT traffic within overlay network (e.g. coming out of docker0)
+			{"nat", "POSTROUTING", []string{"-s", n, "-d", n, "-j", "RETURN"}},
+			// NAT if it's not multicast traffic
+			{"nat", "POSTROUTING", []string{"-s", n, "!", "-d", "224.0.0.0/4", "-j", "MASQUERADE"}},
+			// Prevent performing Masquerade on external traffic which arrives from a Node that owns the container/pod IP address
+			{"nat", "POSTROUTING", []string{"!", "-s", n, "-d", sn, "-j", "RETURN"}},
+			// Masquerade anything headed towards flannel from the host
+			{"nat", "POSTROUTING", []string{"!", "-s", n, "-d", n, "-j", "MASQUERADE"}},
+		}
 	}
 }
 
@@ -79,7 +97,7 @@ func ipTablesRulesExist(ipt IPTables, rules []IPTablesRule) (bool, error) {
 	return true, nil
 }
 
-func SetupAndEnsureIPTables(rules []IPTablesRule) {
+func SetupAndEnsureIPTables(rules []IPTablesRule, resyncPeriod int) {
 	ipt, err := iptables.New()
 	if err != nil {
 		// if we can't find iptables, give up and return
@@ -97,8 +115,20 @@ func SetupAndEnsureIPTables(rules []IPTablesRule) {
 			log.Errorf("Failed to ensure iptables rules: %v", err)
 		}
 
-		time.Sleep(5 * time.Second)
+		time.Sleep(time.Duration(resyncPeriod) * time.Second)
 	}
+}
+
+// DeleteIPTables delete specified iptables rules
+func DeleteIPTables(rules []IPTablesRule) error {
+	ipt, err := iptables.New()
+	if err != nil {
+		// if we can't find iptables, give up and return
+		log.Errorf("Failed to setup IPTables. iptables binary was not found: %v", err)
+		return err
+	}
+	teardownIPTables(ipt, rules)
+	return nil
 }
 
 func ensureIPTables(ipt IPTables, rules []IPTablesRule) error {

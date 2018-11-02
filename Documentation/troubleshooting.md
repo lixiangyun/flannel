@@ -5,7 +5,7 @@
 ## Connectivity
 In Docker v1.13 and later, the default iptables forwarding policy was changed to `DROP`. For more detail on the Docker change, see the Docker [documentation](https://docs.docker.com/engine/userguide/networking/default_network/container-communication/#container-communication-between-hosts).
 
-This problems manifests itself as connectivity problems between containers running on different hosts. To resolve it upgrade to the lateset version of flannel.
+This problems manifests itself as connectivity problems between containers running on different hosts. To resolve it upgrade to the latest version of flannel.
 
 
 ## Logging
@@ -85,4 +85,4 @@ It's possible to manually set the `podCIDR` for each node.
 * `failed to read net conf` - flannel expects to be able to read the net conf from "/etc/kube-flannel/net-conf.json". In the provided manifest, this is set up in the `kube-flannel-cfg` ConfigMap.
 * `error parsing subnet config` - The net conf is malformed. Double check that it has the right content and is valid JSON.
 * `node <NODE_NAME> pod cidr not assigned` - The node doesn't have a `podCIDR` defined. See above for more info.
-* `Failed to create SubnetManager: error retrieving pod spec for 'kube-system/kube-flannel-ds-abc123': the server does not allow access to the requested resource` - The kubernetes cluster has RBAC enabled. Run `https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel-rbac.yml`
+* `Failed to create SubnetManager: error retrieving pod spec for 'kube-system/kube-flannel-ds-abc123': the server does not allow access to the requested resource` - The kubernetes cluster has RBAC enabled. Run `https://raw.githubusercontent.com/coreos/flannel/master/Documentation/k8s-manifests/kube-flannel-rbac.yml`

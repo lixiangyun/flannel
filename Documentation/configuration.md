@@ -1,7 +1,8 @@
 # Configuration
 
-flannel reads its configuration from etcd.
+If the --kube-subnet-mgr argument is true, flannel reads its configuration from `/etc/kube-flannel/net-conf.json`.
 
+If the --kube-subnet-mgr argument is false, flannel reads its configuration from etcd.
 By default, it will read the configuration from `/coreos.com/network/config` (which can be overridden using `--etcd-prefix`).
 
 Use the `etcdctl` utility to set values in etcd.
@@ -55,6 +56,7 @@ The following configuration illustrates the use of most options with `udp` backe
 --kube-subnet-mgr: Contact the Kubernetes API for subnet assignment instead of etcd.
 --iface="": interface to use (IP or name) for inter-host communication. Defaults to the interface for the default route on the machine. This can be specified multiple times to check each option in order. Returns the first match found.
 --iface-regex="": regex expression to match the first interface to use (IP or name) for inter-host communication. If unspecified, will default to the interface for the default route on the machine. This can be specified multiple times to check each regex in order. Returns the first match found. This option is superseded by the iface option and will only be used if nothing matches any option specified in the iface options.
+--iptables-resync=5: resync period for iptables rules, in seconds. Defaults to 5 seconds, if you see a large amount of contention for the iptables lock increasing this will probably help.
 --subnet-file=/run/flannel/subnet.env: filename where env variables (subnet and MTU values) will be written to.
 --subnet-lease-renew-margin=60: subnet lease renewal margin, in minutes.
 --ip-masq=false: setup IP masquerade for traffic destined for outside the flannel network. Flannel assumes that the default policy is ACCEPT in the NAT POSTROUTING chain.
